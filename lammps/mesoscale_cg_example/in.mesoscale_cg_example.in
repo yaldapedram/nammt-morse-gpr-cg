@@ -1,0 +1,53 @@
+# Example LAMMPS input for coarse-grained Na-montmorillonite
+# Site type 1: central platelet site
+# Site type 2: edge platelet site
+
+units           real
+atom_style      full
+
+read_data 1000_platelet.data
+
+
+# Tabulated coarse-grained pair interactions
+pair_style  table linear  1000    
+
+
+pair_coeff 1 1 center_center.txt Cent_Cent
+pair_coeff 1 2  edge_center.txt Cent_Edge
+pair_coeff 2 2  edge_edge.txt Edge_Edge
+
+# Initial velocities
+velocity all create 300. 50505 rot yes dist gaussian
+
+
+#set up a rigid system in the NVT emsemble
+fix 1 all  rigid/nvt/small molecule temp 300  300 1000
+
+# Exclude interactions between coarse-grained sites belonging
+# to the same rigid platelet
+neigh_modify exclude molecule/intra all
+
+
+
+
+#this a required cut off for rigid system typically set slighter larger than radius of your system
+comm_modify mode single cutoff 65
+
+timestep        10.0
+
+dump            1 all xyz 10 test.xyz
+
+# Rigid-body positions and quaternions
+compute 1 all rigid/local 1  mol x y z xu yu zu quatw quati quatj quatk
+dump 2 all local 1000000 80.quart  c_1[1]  c_1[2]  c_1[3]  c_1[4] c_1[5]  c_1[6]  c_1[7]  c_1[8] c_1[9] c_1[10] c_1[11]
+
+thermo_style    custom step temp epair pe etotal press vol density lx ly lz
+thermo          10 
+
+restart  1000000 equil
+
+run           5000000
+
+unfix 1
+
+
